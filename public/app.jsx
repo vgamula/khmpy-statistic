@@ -3,13 +3,17 @@
 var Row = React.createClass({
     render() {
         var obj = this.props.obj;
+        var buttonText = 'Up vote';
+        if (obj.vote === 'plus') {
+            buttonText = 'Down vote'
+        }
         return (
             <li>
                 <h4>{obj.title}</h4>
                 <p>+: {obj.plus}</p>
                 <p>-: {obj.minus}</p>
                 <p>all: {obj.amount}</p>
-                <button onClick={this.vote}>Vote</button>
+                <button onClick={this.vote}>{buttonText}</button>
                 <hr />
             </li>
         );

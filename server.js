@@ -8,7 +8,6 @@ var _ = require('lodash');
 var server = http.Server(app);
 var io = require('socket.io')(server);
 
-
 var session = require("express-session")({
     secret: "my-secret",
     resave: true,
@@ -75,13 +74,37 @@ function removeByValue(arr, val) {
     });
 }
 
+var getDataForSocket = function(socket) {
+    var socketId = socket.handshake.session.id;
+    return globalData.map(function(obj) {
+        return {
+            id: obj.id,
+            title: obj.title,
+            plus: obj.plus.length,
+            minus: obj.minus.length,
+            amount: obj.plus.length + obj.minus.length,
+            vote: _.includes(obj.plus, socketId) ? 'plus' : null
+        }
+    });
+}
+
+var clients = [];
+
+function updateData() {
+    clients.map(function(socket) {
+        socket.emit('data', getDataForSocket(socket))
+    });
+}
+
+
 io.on('connection', function(socket) {
     if (!socket.handshake.session.id) {
         socket.handshake.session.id = socket.id;
     }
+    clients.push(socket);
     // console.log(socket.handshake.session.id);
 
-    io.sockets.emit('data', getData());
+    updateData();
 
     socket.on('vote', function(dataId) {
         var socketId = socket.handshake.session.id;
@@ -95,15 +118,16 @@ io.on('connection', function(socket) {
         } else {
             elem.plus.push(socketId);
         }
-        io.sockets.emit('data', getData());
+        updateData();
     });
 
     socket.on('disconnect', function() {
+        _.remove(clients, socket);
         var socketId = socket.handshake.session.id;
         globalData.map(function(obj) {
-            _.remove(obj.minus, socketId);
-            _.remove(obj.plus, socketId);
+            removeByValue(obj.minus, socketId);
+            removeByValue(obj.plus, socketId);
         });
-        io.sockets.emit('data', getData());
+        updateData();
     });
 });
