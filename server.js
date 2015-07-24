@@ -83,7 +83,7 @@ var getDataForSocket = function(socket) {
             plus: obj.plus.length,
             minus: obj.minus.length,
             amount: obj.plus.length + obj.minus.length,
-            vote: _.includes(obj.plus, socketId) ? 'plus' : null
+            vote: _.includes(obj.plus, socketId) ? 'plus' : (_.includes(obj.minus, socketId) ? 'minus': null)
         }
     });
 }
@@ -128,6 +128,14 @@ io.on('connection', function(socket) {
             removeByValue(obj.minus, socketId);
             removeByValue(obj.plus, socketId);
         });
+        updateData();
+    });
+
+    socket.on('deleteVote', function(dataId){
+        var socketId = socket.handshake.session.id;
+        var elem = _.findWhere(globalData, {id: dataId});
+        removeByValue(elem.plus, socketId);
+        removeByValue(elem.minus, socketId);
         updateData();
     });
 });

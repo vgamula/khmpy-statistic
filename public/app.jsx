@@ -14,12 +14,18 @@ var Row = React.createClass({
                 <p>-: {obj.minus}</p>
                 <p>all: {obj.amount}</p>
                 <button onClick={this.vote}>{buttonText}</button>
+                {obj.vote && (
+                    <button onClick={this.deleteVote}>Delete vote</button>
+                )}
                 <hr />
             </li>
         );
     },
     vote: function() {
         this.props.socket.emit('vote', this.props.obj.id);
+    },
+    deleteVote: function() {
+        this.props.socket.emit('deleteVote', this.props.obj.id);
     }
 });
 
