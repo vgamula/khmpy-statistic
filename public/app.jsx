@@ -1,4 +1,4 @@
-/* global React, io */
+/* global React, io, Chart */
 
 var Row = React.createClass({
     render() {
@@ -17,9 +17,37 @@ var Row = React.createClass({
                 {obj.vote && (
                     <button onClick={this.deleteVote}>Delete vote</button>
                 )}
+                <canvas ref="canvas" width="100" height="100"></canvas>
                 <hr />
             </li>
         );
+    },
+    renderDiagram() {
+        var obj = this.props.obj;
+        if (obj.amount === 0) {
+            return;
+        }
+        // debugger;
+        var ctx = this.refs.canvas.getDOMNode().getContext("2d");
+        var data = [
+            {
+                value: obj.plus,
+                color: '#d1192b',
+                label: 'Plus'
+            },
+            {
+                value: obj.minus,
+                color: '#4d53fa',
+                label: 'Minus'
+            }
+        ];
+        var myPieChart = new Chart(ctx).Pie(data, {});
+    },
+    componentDidMount() {
+        this.renderDiagram();
+    },
+    componentDidUpdate() {
+        this.renderDiagram();
     },
     vote: function() {
         this.props.socket.emit('vote', this.props.obj.id);
