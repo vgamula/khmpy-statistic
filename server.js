@@ -1,11 +1,12 @@
-var http = require('http')
-  , path = require('path')
-  , express = require('express')
-  , app = express()
+var http = require('http');
+var path = require('path');
+var express = require('express');
+var app = express();
+var _ = require('lodash');
 
 
-var server = http.Server(app)
-  , io = require('socket.io')(server);
+var server = http.Server(app);
+var io = require('socket.io')(server);
 
 
 var session = require("express-session")({
@@ -25,110 +26,84 @@ io.use(sharedsession(session, {
 app.use('/', express.static(path.join(__dirname, 'public')));
 
 
-io.on('connection', function (socket) {
-    if (!socket.handshake.session.id) {
-        socket.handshake.session.id = socket.id;
-    }
-    console.log(socket.handshake.session.id);
-});
-
 server.listen(3000);
 console.log('Listening on port 3000')
 
-// var path = require('path');
-// var express = require('express');
-// var Server = require('http').Server;
-// var session = require("express-session");
-// var RedisStore = require("connect-redis")(session);
 
-// var _ = require('lodash');
+var globalData = [
+    {
+        id: 1,
+        title: 'first',
+        plus: [],
+        minus: []
+    },
+    {
+        id: 2,
+        title: 'second',
+        plus: [],
+        minus: []
+    },
+    {
+        id: 3,
+        title: 'third',
+        plus: [],
+        minus: []
+    },
+    {
+        id: 4,
+        title: 'fifth',
+        plus: [],
+        minus: []
+    }
+];
 
-// var app = express();
-// app.use('/', express.static(path.join(__dirname, 'public')));
+function getData() {
+    return globalData.map(function(obj) {
+        return {
+            id: obj.id,
+            title: obj.title,
+            plus: obj.plus.length,
+            minus: obj.minus.length,
+            amount: obj.plus.length + obj.minus.length,
+        }
+    });
+}
 
+function removeByValue(arr, val) {
+    _.remove(arr, function(obj) {
+        return obj === val;
+    });
+}
 
+io.on('connection', function(socket) {
+    if (!socket.handshake.session.id) {
+        socket.handshake.session.id = socket.id;
+    }
+    // console.log(socket.handshake.session.id);
 
-// var server = Server(app);
-// var io = require("socket.io")(server);
+    io.sockets.emit('data', getData());
 
-// var sessionMiddleware = session({
-//     store: new RedisStore({}), // XXX redis server config
-//     secret: "keyboard cat",
-// });
+    socket.on('vote', function(dataId) {
+        var socketId = socket.handshake.session.id;
+        var elem = _.findWhere(globalData, {id: dataId});
+        if (_.includes(elem.minus, socketId)) {
+            removeByValue(elem.minus, socketId);
+            elem.plus.push(socketId);
+        } else if (_.includes(elem.plus, socketId)) {
+            removeByValue(elem.plus, socketId);
+            elem.minus.push(socketId);
+        } else {
+            elem.plus.push(socketId);
+        }
+        io.sockets.emit('data', getData());
+    });
 
-// io.use(function(socket, next) {
-//     sessionMiddleware(socket.request, socket.request.res, next);
-// });
-// app.use(sessionMiddleware);
-
-// server.listen(3000)
-// console.log('Server listening on port 3000');
-
-
-// var globalData = [
-//     {
-//         id: 1,
-//         title: 'first',
-//         plus: [],
-//         minus: []
-//     },
-//     {
-//         id: 2,
-//         title: 'second',
-//         plus: [],
-//         minus: []
-//     },
-//     {
-//         id: 3,
-//         title: 'third',
-//         plus: [],
-//         minus: []
-//     },
-//     {
-//         id: 4,
-//         title: 'fifth',
-//         plus: [],
-//         minus: []
-//     }
-// ];
-
-// function getData() {
-//     return globalData.map(function(obj) {
-//         return {
-//             id: obj.id,
-//             title: obj.title,
-//             plus: obj.plus.length,
-//             minus: obj.minus.length,
-//             amount: obj.plus.length + obj.minus.length,
-//         }
-//     });
-// }
-
-// io.on('connection', function(socket) {
-//     console.log(socket.request.session);
-
-
-//     io.sockets.emit('data', getData());
-
-//     socket.on('vote', function(dataId) {
-//         var elem = _.findWhere(globalData, {id: dataId});
-//         if (_.includes(elem.minus, socket)) {
-//             _.remove(elem.minus, socket);
-//             elem.plus.push(socket);
-//         } else if (_.includes(elem.plus, socket)) {
-//             _.remove(elem.plus, socket);
-//             elem.minus.push(socket);
-//         } else {
-//             elem.plus.push(socket);
-//         }
-//         io.sockets.emit('data', getData());
-//     });
-
-//     socket.on('disconnect', function() {
-//         globalData.map(function(obj) {
-//             _.remove(obj.minus, socket);
-//             _.remove(obj.plus, socket);
-//         });
-//         io.sockets.emit('data', getData());
-//     });
-// });
+    socket.on('disconnect', function() {
+        var socketId = socket.handshake.session.id;
+        globalData.map(function(obj) {
+            _.remove(obj.minus, socketId);
+            _.remove(obj.plus, socketId);
+        });
+        io.sockets.emit('data', getData());
+    });
+});
