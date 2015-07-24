@@ -40,7 +40,6 @@ var App = React.createClass({
         var self = this;
         this.socket = io();
         this.socket.on('data', function(data) {
-            console.log(data);
             self.setState({
                 data: data
             });
